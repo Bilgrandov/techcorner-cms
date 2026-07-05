@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TechCorner CMS — Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="layout">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <h1>✦ TechCorner CMS</h1>
+        <p>Content Manager</p>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="dashboard.html" class="nav-link active">
+          <span class="icon">📋</span> Dashboard
+        </a>
+        <a href="editor.html" class="nav-link">
+          <span class="icon">✏️</span> New Post
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="user-info">
+          <div class="user-avatar" id="user-avatar">?</div>
+          <span class="user-email" id="user-email">Loading...</span>
+        </div>
+        <button id="logout-btn">Sign Out</button>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="main">
+
+      <!-- Stats -->
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-label">Total Posts</div>
+          <div class="stat-value" id="stat-total">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Journal</div>
+          <div class="stat-value" id="stat-journal">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Blog</div>
+          <div class="stat-value" id="stat-blog">—</div>
+        </div>
+      </div>
+
+      <!-- Header -->
+      <div class="page-header">
+        <div>
+          <h2>All Posts</h2>
+          <p>Manage your published content</p>
+        </div>
+        <a href="editor.html" class="btn btn-primary">
+          ＋ New Post
+        </a>
+      </div>
+
+      <!-- Post list -->
+      <div id="post-list" class="post-list">
+        <p class="loading">Loading posts...</p>
+      </div>
+
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.config.js"></script>
+  <script src="app.js"></script>
+  <script>
+    async function init() {
+      const session = await requireAuth();
+      if (!session) return;
+      await renderUserInfo();
+      await loadPosts();
+    }
+
+    async function loadPosts() {
+      const listEl = document.getElementById('post-list');
+
+      const { data: posts, error } = await sb
+        .from('posts')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        listEl.innerHTML = `<p class="loading" style="color:var(--danger)">Error: ${error.message}</p>`;
+        return;
+      }
+
+      // Update stats
+      document.getElementById('stat-total').textContent   = posts.length;
+      document.getElementById('stat-journal').textContent = posts.filter(p => p.type === 'journal').length;
+      document.getElementById('stat-blog').textContent    = posts.filter(p => p.type === 'blog').length;
+
+      if (posts.length === 0) {
+        listEl.innerHTML = `
+          <div class="empty-state">
+            <div class="icon">📝</div>
+            <p>No posts yet. <a href="editor.html" style="color:var(--accent)">Create your first post</a>.</p>
+          </div>`;
+        return;
+      }
+
+      listEl.innerHTML = posts.map(post => `
+        <div class="post-item">
+          <div class="post-item-info">
+            <div class="post-title">${escapeHtml(post.title)}</div>
+            <div class="post-meta">
+              <span class="badge ${badgeClass(post.type)}">${post.type}</span>
+              <span class="post-date">${formatDate(post.created_at)}</span>
+            </div>
+          </div>
+          <div class="post-actions">
+            <a href="editor.html?id=${post.id}" class="btn btn-ghost btn-sm">Edit</a>
+            <button class="btn btn-danger btn-sm" onclick="deletePost(${post.id}, this)">Delete</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function deletePost(id, btn) {
+      if (!confirm('Hapus post ini? Tidak bisa di-undo.')) return;
+      btn.textContent = '...';
+      btn.disabled = true;
+
+      const { error } = await sb.from('posts').delete().eq('id', id);
+      if (error) {
+        showToast('Gagal hapus: ' + error.message, 'error');
+        btn.textContent = 'Delete';
+        btn.disabled = false;
+      } else {
+        showToast('Post berhasil dihapus.', 'success');
+        await loadPosts();
+      }
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    init();
+  </script>
+</body>
+</html>

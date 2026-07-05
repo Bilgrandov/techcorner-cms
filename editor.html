@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TechCorner CMS — Editor</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="layout">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <h1>✦ TechCorner CMS</h1>
+        <p>Content Manager</p>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="dashboard.html" class="nav-link">
+          <span class="icon">📋</span> Dashboard
+        </a>
+        <a href="editor.html" class="nav-link active">
+          <span class="icon">✏️</span> New Post
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="user-info">
+          <div class="user-avatar" id="user-avatar">?</div>
+          <span class="user-email" id="user-email">Loading...</span>
+        </div>
+        <button id="logout-btn">Sign Out</button>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="main">
+
+      <div class="page-header">
+        <div>
+          <h2 id="page-title">New Post</h2>
+          <p id="page-subtitle">Write and publish your content</p>
+        </div>
+        <div style="display:flex;gap:10px">
+          <a href="dashboard.html" class="btn btn-ghost">← Back</a>
+          <button id="save-btn" class="btn btn-primary">Publish</button>
+        </div>
+      </div>
+
+      <!-- Meta fields -->
+      <div class="card" style="margin-bottom:20px">
+        <div style="display:grid;grid-template-columns:1fr auto;gap:16px;align-items:end">
+          <div class="form-group" style="margin-bottom:0">
+            <label for="post-title">Title</label>
+            <input type="text" id="post-title" class="form-control" placeholder="Post title...">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label for="post-type">Category</label>
+            <select id="post-type" class="form-control">
+              <option value="journal">Journal</option>
+              <option value="blog">Blog</option>
+              <option value="cp">CP (Competitive Programming)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Editor + Preview -->
+      <div class="editor-layout">
+        <div>
+          <div class="editor-pane-label">Markdown</div>
+          <textarea id="post-content" class="form-control" placeholder="Write your content in Markdown...
+
+# Heading
+**bold**, *italic*, `code`
+
+```php
+echo 'Hello World';
+```"></textarea>
+        </div>
+        <div>
+          <div class="editor-pane-label">Preview</div>
+          <div id="preview" class="markdown-preview">
+            <span style="color:var(--text-muted);font-style:italic">Preview will appear here as you type...</span>
+          </div>
+        </div>
+      </div>
+
+      <div id="save-error" class="form-error" style="margin-top:12px;display:none;"></div>
+
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="supabase.config.js"></script>
+  <script src="app.js"></script>
+  <script>
+    let editId = null; // null = new post, number = edit existing
+
+    async function init() {
+      const session = await requireAuth();
+      if (!session) return;
+      await renderUserInfo();
+
+      // Check if editing existing post (URL: editor.html?id=5)
+      const params = new URLSearchParams(window.location.search);
+      editId = params.get('id') ? parseInt(params.get('id')) : null;
+
+      if (editId) {
+        document.getElementById('page-title').textContent    = 'Edit Post';
+        document.getElementById('page-subtitle').textContent = `Editing post #${editId}`;
+        document.getElementById('save-btn').textContent      = 'Update';
+        await loadPost(editId);
+      }
+    }
+
+    async function loadPost(id) {
+      const { data, error } = await sb.from('posts').select('*').eq('id', id).single();
+      if (error || !data) {
+        showToast('Post tidak ditemukan.', 'error');
+        return;
+      }
+      document.getElementById('post-title').value   = data.title   || '';
+      document.getElementById('post-type').value    = data.type    || 'journal';
+      document.getElementById('post-content').value = data.content || '';
+      updatePreview();
+    }
+
+    // Live markdown preview
+    function updatePreview() {
+      const content = document.getElementById('post-content').value;
+      const preview = document.getElementById('preview');
+      preview.innerHTML = content.trim()
+        ? marked.parse(content)
+        : '<span style="color:var(--text-muted);font-style:italic">Preview will appear here as you type...</span>';
+    }
+
+    document.getElementById('post-content').addEventListener('input', updatePreview);
+
+    // Save / Update
+    document.getElementById('save-btn').addEventListener('click', async () => {
+      const title   = document.getElementById('post-title').value.trim();
+      const type    = document.getElementById('post-type').value;
+      const content = document.getElementById('post-content').value.trim();
+      const errorEl = document.getElementById('save-error');
+      const btn     = document.getElementById('save-btn');
+
+      if (!title || !content) {
+        errorEl.textContent = 'Title dan content wajib diisi.';
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      errorEl.style.display = 'none';
+      btn.textContent = editId ? 'Updating...' : 'Publishing...';
+      btn.disabled = true;
+
+      let error;
+
+      if (editId) {
+        // Update existing
+        ({ error } = await sb.from('posts').update({ title, type, content }).eq('id', editId));
+      } else {
+        // Insert new
+        ({ error } = await sb.from('posts').insert([{ title, type, content }]));
+      }
+
+      if (error) {
+        errorEl.textContent = error.message;
+        errorEl.style.display = 'block';
+        btn.textContent = editId ? 'Update' : 'Publish';
+        btn.disabled = false;
+      } else {
+        showToast(editId ? 'Post updated!' : 'Post published!', 'success');
+        setTimeout(() => window.location.href = 'dashboard.html', 1000);
+      }
+    });
+
+    init();
+  </script>
+</body>
+</html>

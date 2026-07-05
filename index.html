@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TechCorner CMS — Login</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="login-page">
+    <div class="login-box">
+
+      <div class="login-logo">
+        <h1>✦ TechCorner CMS</h1>
+        <p>Admin area — sign in to continue</p>
+      </div>
+
+      <div class="card">
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" class="form-control" placeholder="your@email.com" autocomplete="email">
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" class="form-control" placeholder="••••••••" autocomplete="current-password">
+        </div>
+
+        <div id="login-error" class="form-error" style="display:none;"></div>
+
+        <button id="login-btn" class="btn btn-primary" style="width:100%; justify-content:center; margin-top:8px;">
+          Sign In
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.config.js"></script>
+  <script src="app.js"></script>
+  <script>
+    // Kalau sudah login, langsung ke dashboard
+    sb.auth.getSession().then(({ data: { session } }) => {
+      if (session) window.location.href = 'dashboard.html';
+    });
+
+    document.getElementById('login-btn').addEventListener('click', async () => {
+      const email    = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const errorEl  = document.getElementById('login-error');
+      const btn      = document.getElementById('login-btn');
+
+      if (!email || !password) {
+        errorEl.textContent = 'Email dan password wajib diisi.';
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      btn.textContent = 'Signing in...';
+      btn.disabled = true;
+      errorEl.style.display = 'none';
+
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+
+      if (error) {
+        errorEl.textContent = error.message;
+        errorEl.style.display = 'block';
+        btn.textContent = 'Sign In';
+        btn.disabled = false;
+      } else {
+        window.location.href = 'dashboard.html';
+      }
+    });
+
+    // Enter key submit
+    document.getElementById('password').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') document.getElementById('login-btn').click();
+    });
+  </script>
+</body>
+</html>
