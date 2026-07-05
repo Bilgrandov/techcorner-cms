@@ -74,32 +74,71 @@
   <script src="supabase.config.js"></script>
   <script src="app.js"></script>
   <script>
+    const PAGE_SIZE = 10;
+    let currentOffset = 0;
+    let totalCount    = 0;
+    let loadedPosts   = [];
+
     async function init() {
       const session = await requireAuth();
       if (!session) return;
       await renderUserInfo();
-      await loadPosts();
+      await loadPosts(true);
     }
 
-    async function loadPosts() {
-      const listEl = document.getElementById('post-list');
+    async function loadPosts(fresh = false) {
+      const listEl   = document.getElementById('post-list');
+      const moreWrap = document.getElementById('load-more-wrap');
 
-      const { data: posts, error } = await sb
+      if (fresh) {
+        currentOffset = 0;
+        loadedPosts   = [];
+        listEl.innerHTML = `
+          <div class="loading-state">
+            <div class="spinner"></div>
+            <span>Loading posts...</span>
+          </div>`;
+      }
+
+      const from = currentOffset;
+      const to   = from + PAGE_SIZE - 1;
+
+      const { data: posts, error, count } = await sb
         .from('posts')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select('*', { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(from, to);
 
       if (error) {
-        listEl.innerHTML = `<p class="loading" style="color:var(--danger)">Error: ${error.message}</p>`;
+        console.error('[Dashboard] loadPosts error:', error);
+        listEl.innerHTML = `
+          <div class="empty-state">
+            <div class="icon">⚠️</div>
+            <p style="color:var(--danger)">${error.message}</p>
+          </div>`;
         return;
       }
 
-      // Update stats
-      document.getElementById('stat-total').textContent   = posts.length;
-      document.getElementById('stat-journal').textContent = posts.filter(p => p.type === 'journal').length;
-      document.getElementById('stat-blog').textContent    = posts.filter(p => p.type === 'blog').length;
+      totalCount   = count ?? 0;
+      loadedPosts  = [...loadedPosts, ...posts];
+      currentOffset += posts.length;
 
-      if (posts.length === 0) {
+      // Update stats
+      const allForStats = fresh
+        ? posts
+        : loadedPosts;
+
+      document.getElementById('stat-total').textContent   = totalCount;
+      document.getElementById('stat-journal').textContent = loadedPosts.filter(p => p.type === 'journal').length + (loadedPosts.length < totalCount ? '+' : '');
+      document.getElementById('stat-blog').textContent    = loadedPosts.filter(p => p.type === 'blog').length + (loadedPosts.length < totalCount ? '+' : '');
+
+      renderPosts();
+    }
+
+    function renderPosts() {
+      const listEl = document.getElementById('post-list');
+
+      if (loadedPosts.length === 0) {
         listEl.innerHTML = `
           <div class="empty-state">
             <div class="icon">📝</div>
@@ -108,41 +147,61 @@
         return;
       }
 
-      listEl.innerHTML = posts.map(post => `
-        <div class="post-item">
-          <div class="post-item-info">
-            <div class="post-title">${escapeHtml(post.title)}</div>
-            <div class="post-meta">
-              <span class="badge ${badgeClass(post.type)}">${post.type}</span>
-              <span class="post-date">${formatDate(post.created_at)}</span>
+      const hasMore = loadedPosts.length < totalCount;
+
+      listEl.innerHTML = `
+        <p class="post-count-label">Showing ${loadedPosts.length} of ${totalCount} posts</p>
+        ${loadedPosts.map(post => `
+          <div class="post-item">
+            <div class="post-item-info">
+              <div class="post-title">${escapeHtml(post.title)}</div>
+              <div class="post-meta">
+                <span class="badge ${badgeClass(post.type)}">${post.type}</span>
+                <span class="post-date">${formatDate(post.created_at)}</span>
+              </div>
+            </div>
+            <div class="post-actions">
+              <a href="editor.html?id=${post.id}" class="btn btn-ghost btn-sm">Edit</a>
+              <button class="btn btn-danger btn-sm" onclick="deletePost(${post.id}, this)">Delete</button>
             </div>
           </div>
-          <div class="post-actions">
-            <a href="editor.html?id=${post.id}" class="btn btn-ghost btn-sm">Edit</a>
-            <button class="btn btn-danger btn-sm" onclick="deletePost(${post.id}, this)">Delete</button>
+        `).join('')}
+        ${hasMore ? `
+          <div class="load-more-wrap">
+            <button class="btn btn-ghost" onclick="loadPosts(false)">
+              Load more (${loadedPosts.length}/${totalCount})
+            </button>
           </div>
-        </div>
-      `).join('');
+        ` : ''}
+      `;
     }
 
     async function deletePost(id, btn) {
       if (!confirm('Hapus post ini? Tidak bisa di-undo.')) return;
+
+      const original = btn.textContent;
       btn.textContent = '...';
       btn.disabled = true;
 
       const { error } = await sb.from('posts').delete().eq('id', id);
+
       if (error) {
+        console.error('[Dashboard] deletePost error:', error);
         showToast('Gagal hapus: ' + error.message, 'error');
-        btn.textContent = 'Delete';
+        btn.textContent = original;
         btn.disabled = false;
       } else {
         showToast('Post berhasil dihapus.', 'success');
-        await loadPosts();
+        await loadPosts(true); // refresh dari awal
       }
     }
 
     function escapeHtml(str) {
-      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
     }
 
     init();

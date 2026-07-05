@@ -92,6 +92,7 @@ echo 'Hello World';
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
   <script src="supabase.config.js"></script>
   <script src="app.js"></script>
   <script>
@@ -126,13 +127,16 @@ echo 'Hello World';
       updatePreview();
     }
 
-    // Live markdown preview
+    // Live markdown preview — sanitized via DOMPurify (XSS protection)
     function updatePreview() {
       const content = document.getElementById('post-content').value;
       const preview = document.getElementById('preview');
-      preview.innerHTML = content.trim()
-        ? marked.parse(content)
-        : '<span style="color:var(--text-muted);font-style:italic">Preview will appear here as you type...</span>';
+      if (content.trim()) {
+        const rawHtml = marked.parse(content);
+        preview.innerHTML = DOMPurify.sanitize(rawHtml);
+      } else {
+        preview.innerHTML = '<span style="color:var(--text-muted);font-style:italic">Preview will appear here as you type...</span>';
+      }
     }
 
     document.getElementById('post-content').addEventListener('input', updatePreview);

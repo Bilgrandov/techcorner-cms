@@ -34,9 +34,10 @@ async function renderUserInfo() {
 }
 
 /**
- * Logout
+ * Logout — dengan konfirmasi
  */
 async function logout() {
+  if (!confirm('Yakin mau sign out?')) return;
   await sb.auth.signOut();
   window.location.href = 'index.html';
 }

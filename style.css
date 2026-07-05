@@ -505,3 +505,39 @@ select.form-control {
 
 /* --- Divider --- */
 hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+
+/* --- Spinner --- */
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.spinner {
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.65s linear infinite;
+  flex-shrink: 0;
+}
+
+.loading-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 48px 20px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+/* --- Pagination --- */
+.load-more-wrap {
+  text-align: center;
+  padding: 16px 0 4px;
+}
+
+.post-count-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+  margin-bottom: 10px;
+}
