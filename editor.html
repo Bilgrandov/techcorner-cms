@@ -67,7 +67,18 @@
       <!-- Editor + Preview -->
       <div class="editor-layout">
         <div>
-          <div class="editor-pane-label">Markdown</div>
+          <div class="editor-pane-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <div class="editor-pane-label" style="margin-bottom:0">Markdown</div>
+            <div class="template-selector">
+              <label for="post-template" style="font-size:11px; margin-right:4px; color:var(--text-muted)">Load Boilerplate:</label>
+              <select id="post-template" style="font-size:11px; padding:2px 4px; border:1px solid var(--border); background:var(--bg-card); color:var(--text); cursor:pointer;">
+                <option value="">-- Select Template --</option>
+                <option value="journal">📝 Journal Template</option>
+                <option value="blog">✍️ Tech Blog Template</option>
+                <option value="cp">💻 CP (Competitive Programming) Template</option>
+              </select>
+            </div>
+          </div>
           <textarea id="post-content" class="form-control" placeholder="Write your content in Markdown...
 
 # Heading
@@ -78,7 +89,7 @@ echo 'Hello World';
 ```"></textarea>
         </div>
         <div>
-          <div class="editor-pane-label">Preview</div>
+          <div class="editor-pane-label" style="margin-bottom:8px">Preview</div>
           <div id="preview" class="markdown-preview">
             <span style="color:var(--text-muted);font-style:italic">Preview will appear here as you type...</span>
           </div>
@@ -97,6 +108,34 @@ echo 'Hello World';
   <script src="app.js"></script>
   <script>
     let editId = null; // null = new post, number = edit existing
+
+    const BOILERPLATES = {
+      journal: `# [Judul Jurnal Hari Ini]\n\nSemua ini bermula ketika...\n\n### Tantangan yang Dihadapi\n...\n\n### Pelajaran Hari Ini\n...\n\n### Penutup\n...`,
+      blog: `# [Judul Artikel Blog]\n\n[Tulis pengantar singkat tentang topik artikel di sini]\n\n---\n\n## 1. Pendahuluan\n...\n\n## 2. Cara Kerja / Konsep Utama\n...\n\n## 3. Implementasi Kode\n\n\`\`\`javascript\n// Contoh implementasi\nfunction helloWorld() {\n  console.log("Hello, World!");\n}\n\`\`\`\n\n## 4. Kesimpulan & Best Practice\n...`,
+      cp: `# LeetCode [No. & Judul Problem]: [Nama Problem]\n\nIni adalah pengalaman saya menyelesaikan problem [Nama Problem] di LeetCode.\n\n### Pendekatan Solusi\nDari problem ini, saya belajar beberapa pendekatan:\n\n1. **[Pendekatan 1]:** [Penjelasan ringkas]. Space Complexity: \`O(1)\`, Time Complexity: \`O(n)\`.\n2. **[Pendekatan 2]:** [Penjelasan ringkas].\n\n---\n\n### Kode Solusi\n\nBerikut adalah hasil solve kode saya menggunakan [Bahasa Pemrograman]:\n\n\`\`\`php\nclass Solution {\n    // Tulis kode solusi di sini\n}\n\`\`\`\n\n### Pelajaran yang Diambil\n...`
+    };
+
+    document.getElementById('post-template').addEventListener('change', (e) => {
+      const val = e.target.value;
+      if (!val) return;
+
+      const contentArea = document.getElementById('post-content');
+      
+      // Konfirmasi jika editor sudah terisi agar tidak terhapus tidak sengaja
+      if (contentArea.value.trim() && !confirm('Memuat boilerplate akan menimpa isi editor saat ini. Lanjutkan?')) {
+        e.target.value = '';
+        return;
+      }
+
+      contentArea.value = BOILERPLATES[val];
+      
+      // Auto-set category select box
+      const typeSelect = document.getElementById('post-type');
+      typeSelect.value = val;
+
+      updatePreview();
+      e.target.value = ''; // Reset dropdown
+    });
 
     async function init() {
       const session = await requireAuth();
