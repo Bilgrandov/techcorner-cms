@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TechCorner CMS — Editor</title>
   <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
   <div class="layout">
 
@@ -67,11 +69,14 @@
       <!-- Editor + Preview -->
       <div class="editor-layout">
         <div>
-          <div class="editor-pane-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <div class="editor-pane-header"
+            style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
             <div class="editor-pane-label" style="margin-bottom:0">Markdown</div>
             <div class="template-selector">
-              <label for="post-template" style="font-size:11px; margin-right:4px; color:var(--text-muted)">Load Boilerplate:</label>
-              <select id="post-template" style="font-size:11px; padding:2px 4px; border:1px solid var(--border); background:var(--bg-card); color:var(--text); cursor:pointer;">
+              <label for="post-template" style="font-size:11px; margin-right:4px; color:var(--text-muted)">Load
+                Boilerplate:</label>
+              <select id="post-template"
+                style="font-size:11px; padding:2px 4px; border:1px solid var(--border); background:var(--bg-card); color:var(--text); cursor:pointer;">
                 <option value="">-- Select Template --</option>
                 <option value="journal">📝 Journal Template</option>
                 <option value="blog">✍️ Tech Blog Template</option>
@@ -107,7 +112,7 @@ echo 'Hello World';
   <script src="supabase.config.js"></script>
   <script src="app.js"></script>
   <script>
-    let editId = null; // null = new post, number = edit existing
+    let editId = null; // null = new post, number = edit 
 
     const BOILERPLATES = {
       journal: `# [Judul Jurnal Hari Ini]\n\nSemua ini bermula ketika...\n\n### Tantangan yang Dihadapi\n...\n\n### Pelajaran Hari Ini\n...\n\n### Penutup\n...`,
@@ -120,7 +125,7 @@ echo 'Hello World';
       if (!val) return;
 
       const contentArea = document.getElementById('post-content');
-      
+
       // Konfirmasi jika editor sudah terisi agar tidak terhapus tidak sengaja
       if (contentArea.value.trim() && !confirm('Memuat boilerplate akan menimpa isi editor saat ini. Lanjutkan?')) {
         e.target.value = '';
@@ -128,7 +133,7 @@ echo 'Hello World';
       }
 
       contentArea.value = BOILERPLATES[val];
-      
+
       // Auto-set category select box
       const typeSelect = document.getElementById('post-type');
       typeSelect.value = val;
@@ -147,9 +152,9 @@ echo 'Hello World';
       editId = params.get('id') ? parseInt(params.get('id')) : null;
 
       if (editId) {
-        document.getElementById('page-title').textContent    = 'Edit Post';
+        document.getElementById('page-title').textContent = 'Edit Post';
         document.getElementById('page-subtitle').textContent = `Editing post #${editId}`;
-        document.getElementById('save-btn').textContent      = 'Update';
+        document.getElementById('save-btn').textContent = 'Update';
         await loadPost(editId);
       }
     }
@@ -160,8 +165,8 @@ echo 'Hello World';
         showToast('Post tidak ditemukan.', 'error');
         return;
       }
-      document.getElementById('post-title').value   = data.title   || '';
-      document.getElementById('post-type').value    = data.type    || 'journal';
+      document.getElementById('post-title').value = data.title || '';
+      document.getElementById('post-type').value = data.type || 'journal';
       document.getElementById('post-content').value = data.content || '';
       updatePreview();
     }
@@ -182,11 +187,11 @@ echo 'Hello World';
 
     // Save / Update
     document.getElementById('save-btn').addEventListener('click', async () => {
-      const title   = document.getElementById('post-title').value.trim();
-      const type    = document.getElementById('post-type').value;
+      const title = document.getElementById('post-title').value.trim();
+      const type = document.getElementById('post-type').value;
       const content = document.getElementById('post-content').value.trim();
       const errorEl = document.getElementById('save-error');
-      const btn     = document.getElementById('save-btn');
+      const btn = document.getElementById('save-btn');
 
       if (!title || !content) {
         errorEl.textContent = 'Title dan content wajib diisi.';
@@ -222,4 +227,5 @@ echo 'Hello World';
     init();
   </script>
 </body>
+
 </html>
